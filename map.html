@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-path {
-  fill:#ccc;
-  stroke:#000
+.tpath {
+  /*fill:#ccc;*/
+  stroke:#ccc
 }
-.census-centr {
+.census-centr-on {
   fill:red;
+}
+
+.census-centr-off {
+  fill:none;
 }
 </style>
 <body>
@@ -44,24 +48,51 @@ d3.json("nyccensus.json", function(error, nyc) {
     if (feature.centroid.some(isNaN)) feature.centroid = null; // off the map
   });
 
-  svg.selectAll('tract')
+  color = d3.scale.sqrt()
+    .domain([0,0.007])
+    // .range(["#deebf7","#08306b"])
+    .range(["#fff","#000"])
+
+  var tracts = svg.selectAll('.tcontainer')
       .data(features)
       .enter()
+      .append("g")
+      .attr('class','tcontainer')
       .append("path")
-      .attr('class','path')
+      .attr('class','tpath')
       .attr("d", path)
+      .attr("fill",'#fff')
       .on("click", function(d){
-        console.log(projection.invert(d.centroid))
+        dcenter(this.parentNode)
       });
 
-  svg.selectAll('census-centr')
-    .data(features)
-    .enter()
+  function dcenter(tct) {
+    reset();
+    var hl_circ = d3.select(tct).selectAll('circle')
+      .attr('class','census-centr-on');
+    var ref_coord = projection.invert(hl_circ.datum().centroid);
+    tracts = set_new_loc(ref_coord)
+  }
+
+  function reset() {
+    d3.selectAll('.census-centr-on')
+      .attr('class','census-centr-off');
+  }
+
+  function set_new_loc(coords) {
+    d3.selectAll('.tpath')
+      .attr('fill',function(d){
+        return color(d3.geo.distance(coords,projection.invert(d.centroid)))
+      })
+  }
+
+  var dots = svg.selectAll('.tcontainer')
     .append('circle')
-    .attr('class','census-centr')
+    .attr('class','census-centr-off')
     .attr('transform',function(d){
       return 'translate (' + d.centroid[0] + ',' +d.centroid[1] + ')'
     })
     .attr('r',2)
+
 })
 </script>
